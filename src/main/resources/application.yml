@@ -1,0 +1,15 @@
+logging:
+  level:
+    root: info
+    sql: error
+
+spring:
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+
+server:
+  servlet:
+    session:
+      timeout: 10m
