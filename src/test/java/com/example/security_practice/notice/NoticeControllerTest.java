@@ -28,7 +28,9 @@ class NoticeControllerTest {
     @BeforeEach
     public void setUp(@Autowired WebApplicationContext applicationContext) {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
-                .apply(springSecurity())
+                //SecurityMockMvcConfigurers.springSecurity() :
+                //Spring Security를 Spring MVC 테스트와 통합할 때 필요한 모든 초기 세팅을 수행한다.
+                .apply(springSecurity()) //이걸 써야 스프링 시큐리티가 적용된다.
                 .alwaysDo(print())
                 .build();
     }
