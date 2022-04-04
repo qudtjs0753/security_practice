@@ -3,6 +3,8 @@ package com.example.security_practice.config;
 /**
  * @Author: kbs
  */
+import com.example.security_practice.filter.StopwatchFilter;
+import com.example.security_practice.filter.TesterAuthenticationFilter;
 import com.example.security_practice.user.User;
 import com.example.security_practice.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
@@ -30,11 +34,23 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        //stopwatch filter
+        http.addFilterBefore(
+                new StopwatchFilter(),
+                WebAsyncManagerIntegrationFilter.class //이게 맨처음 실행되는 필터. 이거 이전에 시작해서 초 세기하는것.
+        );
+        //tester authentication filter
+        http.addFilterBefore(
+                new TesterAuthenticationFilter(this.authenticationManager()),
+                UsernamePasswordAuthenticationFilter.class
+        );
+
+
         // basic authentication
         http.httpBasic().disable(); // basic authentication filter 비활성화
         // csrf
         http.csrf();
-        // remember-me
+        // remember-me //세션이 만료된 경우나 종료된 경우 후에도 서버에서 유저의 인증 유무를 기억한다.
         http.rememberMe();
         // authorization
         http.authorizeRequests()
