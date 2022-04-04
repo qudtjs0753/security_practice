@@ -5,7 +5,11 @@ package com.example.security_practice.config;
  */
 import com.example.security_practice.filter.StopwatchFilter;
 import com.example.security_practice.filter.TesterAuthenticationFilter;
+import com.example.security_practice.jwt.JwtAuthenticationFilter;
+import com.example.security_practice.jwt.JwtAuthorizationFilter;
+import com.example.security_practice.jwt.JwtProperties;
 import com.example.security_practice.user.User;
+import com.example.security_practice.user.UserRepository;
 import com.example.security_practice.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -16,9 +20,11 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -31,19 +37,12 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        //stopwatch filter
-        http.addFilterBefore(
-                new StopwatchFilter(),
-                WebAsyncManagerIntegrationFilter.class //이게 맨처음 실행되는 필터. 이거 이전에 시작해서 초 세기하는것.
-        );
-        //tester authentication filter
-        http.addFilterBefore(
-                new TesterAuthenticationFilter(this.authenticationManager()),
-                UsernamePasswordAuthenticationFilter.class
-        );
+
+
 
 
         // basic authentication
@@ -51,7 +50,20 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         // csrf
         http.csrf();
         // remember-me //세션이 만료된 경우나 종료된 경우 후에도 서버에서 유저의 인증 유무를 기억한다.
-        http.rememberMe();
+        http.rememberMe().disable();
+        //stateless
+        http.sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        //jwt filter
+        //로그인시 바로 이 필터 동작.
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(authenticationManager()),
+                UsernamePasswordAuthenticationFilter.class
+        ).addFilterBefore(
+                new JwtAuthorizationFilter(userRepository),
+                BasicAuthenticationFilter.class
+        );
+
         // authorization
         http.authorizeRequests()
                 // /와 /home은 모두에게 허용
@@ -70,7 +82,9 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         // logout
         http.logout()
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                .logoutSuccessUrl("/");
+                .logoutSuccessUrl("/")
+                .invalidateHttpSession(true)
+                .deleteCookies(JwtProperties.COOKIE_NAME);
     }
 
     @Override
